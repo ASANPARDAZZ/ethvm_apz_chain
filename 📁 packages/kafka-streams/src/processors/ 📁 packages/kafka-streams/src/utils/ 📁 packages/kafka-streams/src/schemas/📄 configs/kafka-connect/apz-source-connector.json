@@ -1,0 +1,14 @@
+{
+  "name": "apz-blockchain-source",
+  "config": {
+    "connector.class": "io.confluent.connect.ethereum.EthereumBlockConnector",
+    "tasks.max": "1",
+    "ethereum.url": "https://rpc.apzchain.org",
+    "topic": "raw-apz-blocks",
+    "start.block": "latest",
+    "batch.size": "100",
+    "schema.registry.url": "http://schema-registry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081"
+  }
+}
