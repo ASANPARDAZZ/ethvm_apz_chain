@@ -1,0 +1,106 @@
+📝 فایل‌های راهنما
+
+📄 README.md
+
+```markdown
+# EthVM for APZ Chain with Kafka Streams
+
+یک پیاده‌سازی کامل از EthVM برای APZ Chain با پردازشگرهای Kafka Streams.
+
+## 🚀 شروع سریع
+
+### پیش‌نیازها
+- Docker & Docker Compose
+- Node.js 18+
+- pnpm
+
+### راه‌اندازی
+
+1. **کلون کردن ریپوزیتوری**
+```bash
+git clone https://github.com/your-username/ethvm-apz-chain.git
+cd ethvm-apz-chain
+```
+
+1. کپی فایل محیطی
+
+```bash
+cp .env.example .env
+```
+
+1. راه‌اندازی سرویس‌ها
+
+```bash
+docker-compose up -d
+```
+
+1. راه‌اندازی پردازشگرها
+
+```bash
+pnpm install
+pnpm build
+pnpm start:processors
+```
+
+📊 مانیتورینگ
+
+· Grafana: http://localhost:3000 (admin/admin)
+· Prometheus: http://localhost:9090
+· Kafka UI: http://localhost:8080
+
+🏗️ معماری
+
+این پروژه از معماری زیر استفاده می‌کند:
+
+1. Data Ingestion: Kafka Connect برای دریافت داده از APZ RPC
+2. Stream Processing: Kafka Streams برای پردازش تراکنش‌ها
+3. Storage: PostgreSQL برای ذخیره داده‌های پردازش شده
+4. API: NestJS برای سرویس API
+5. Frontend: Vue.js برای رابط کاربری
+
+```
+
+---
+
+### 📄 `package.json` اصلی
+
+```json
+{
+  "name": "ethvm-apz-chain",
+  "version": "1.0.0",
+  "description": "EthVM implementation for APZ Chain with Kafka Streams",
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:processors\" \"pnpm dev:api\" \"pnpm dev:frontend\"",
+    "dev:processors": "cd packages/kafka-streams && pnpm dev",
+    "build": "lerna run build",
+    "test": "lerna run test",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "deploy:prod": "./scripts/deploy.sh production"
+  },
+  "devDependencies": {
+    "lerna": "^6.0.0",
+    "concurrently": "^7.0.0",
+    "typescript": "^4.9.0"
+  }
+}
+```
+
+---
+
+🎯 راهنمای استقرار در GitHub
+
+1. ایجاد ریپوزیتوری جدید در GitHub
+2. راه‌اندازی اولیه:
+
+```bash
+git init
+git add .
+git commit -m "feat: initial EthVM APZ Chain implementation with Kafka Streams"
+git branch -M main
+git remote add origin https://github.com/your-username/ethvm-apz-chain.git
+git push -u origin main
+```
+
+1. تنظیم GitHub Actions (به صورت خودکار از .github/workflows/ اجرا می‌شود
