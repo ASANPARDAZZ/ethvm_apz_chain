@@ -1,0 +1,81 @@
+{
+  "type": "record",
+  "name": "APZTransaction",
+  "namespace": "com.ethvm.apz",
+  "fields": [
+    {
+      "name": "hash",
+      "type": "string"
+    },
+    {
+      "name": "blockNumber",
+      "type": "long"
+    },
+    {
+      "name": "from",
+      "type": "string"
+    },
+    {
+      "name": "to",
+      "type": ["null", "string"]
+    },
+    {
+      "name": "value",
+      "type": "string"
+    },
+    {
+      "name": "gas",
+      "type": "long"
+    },
+    {
+      "name": "gasPrice",
+      "type": "long"
+    },
+    {
+      "name": "input",
+      "type": "string"
+    },
+    {
+      "name": "timestamp",
+      "type": "long"
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "TransactionStatus",
+        "symbols": ["pending", "confirmed", "failed"]
+      }
+    },
+    {
+      "name": "apzSpecific",
+      "type": {
+        "type": "record",
+        "name": "APZSpecificData",
+        "fields": [
+          {
+            "name": "tokenTransfers",
+            "type": {
+              "type": "array",
+              "items": {
+                "type": "record",
+                "name": "TokenTransfer",
+                "fields": [
+                  {"name": "type", "type": "string"},
+                  {"name": "from", "type": "string"},
+                  {"name": "to", "type": "string"},
+                  {"name": "value", "type": "string"},
+                  {"name": "tokenAddress", "type": "string"}
+                ]
+              }
+            }
+          },
+          {
+            "name": "fee",
+            "type": "long"
+          }
+        ]
+      }
+    }
+  ]
+}
