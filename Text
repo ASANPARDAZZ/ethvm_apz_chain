@@ -1,0 +1,66 @@
+ethvm-apz-chain/
+├── 📁 .github/
+│   └── 📁 workflows/
+│       ├── ci-cd.yml
+│       └── docker-publish.yml
+├── 📁 configs/
+│   ├── kafka-connect/
+│   │   ├── apz-source-connector.json
+│   │   └── postgres-sink-connector.json
+│   ├── prometheus/
+│   │   └── prometheus.yml
+│   └── grafana/
+│       └── dashboard.yml
+├── 📁 docker/
+│   ├── kafka-cluster.yml
+│   ├── monitoring.yml
+│   └── services.yml
+├── 📁 packages/
+│   ├── 📁 kafka-streams/
+│   │   ├── 📁 src/
+│   │   │   ├── 📁 processors/
+│   │   │   │   ├── apz-transaction-processor.ts
+│   │   │   │   ├── apz-token-processor.ts
+│   │   │   │   └── apz-block-processor.ts
+│   │   │   ├── 📁 schemas/
+│   │   │   │   ├── transaction.avsc
+│   │   │   │   ├── block.avsc
+│   │   │   │   └── token-transfer.avsc
+│   │   │   ├── 📁 utils/
+│   │   │   │   ├── kafka-config.ts
+│   │   │   │   └── metrics.ts
+│   │   │   └── index.ts
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── Dockerfile
+│   ├── 📁 api-service/
+│   │   ├── 📁 src/
+│   │   │   ├── 📁 controllers/
+│   │   │   ├── 📁 services/
+│   │   │   ├── 📁 models/
+│   │   │   └── server.ts
+│   │   └── package.json
+│   ├── 📁 frontend/
+│   │   ├── 📁 src/
+│   │   │   ├── 📁 components/
+│   │   │   ├── 📁 views/
+│   │   │   └── main.ts
+│   │   └── package.json
+│   └── 📁 common/
+│       ├── 📁 types/
+│       ├── 📁 utils/
+│       └── package.json
+├── 📁 database/
+│   ├── migrations/
+│   ├── seeders/
+│   └── schema.sql
+├── 📁 scripts/
+│   ├── deploy.sh
+│   ├── monitoring.sh
+│   └── kafka-setup.sh
+├── .env.example
+├── docker-compose.yml
+├── package.json
+├── README.md
+├── LICENSE
+└── .gitignore
