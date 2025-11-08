@@ -1,0 +1,212 @@
+import { Kafka, KafkaJS, logLevel } from 'kafkajs';
+import { Registry, AvroSerializer } from '@kafkajs/confluent-schema-registry';
+import { PrometheusMetrics } from '../utils/metrics';
+import { APZTransaction, APZBlock, APZTokenTransfer } from '../../../common/types';
+
+export class APZTransactionProcessor {
+  private kafka: Kafka;
+  private registry: Registry;
+  private metrics: PrometheusMetrics;
+  private producer: KafkaJS.Producer;
+  private consumer: KafkaJS.Consumer;
+
+  constructor(
+    private readonly config: {
+      kafkaBrokers: string[];
+      schemaRegistryUrl: string;
+      sourceTopic: string;
+      outputTopic: string;
+      groupId: string;
+    }
+  ) {
+    this.kafka = new Kafka({
+      clientId: 'apz-transaction-processor',
+      brokers: config.kafkaBrokers,
+      logLevel: logLevel.INFO,
+    });
+
+    this.registry = new Registry({
+      host: config.schemaRegistryUrl
+    });
+
+    this.metrics = new PrometheusMetrics();
+    this.producer = this.kafka.producer();
+    this.consumer = this.kafka.consumer({ groupId: config.groupId });
+  }
+
+  async start(): Promise<void> {
+    await this.connect();
+    await this.setupConsumer();
+
+    console.log('🚀 APZ Transaction Processor started successfully');
+  }
+
+  private async connect(): Promise<void> {
+    await this.producer.connect();
+    await this.consumer.connect();
+    
+    await this.consumer.subscribe({ 
+      topic: this.config.sourceTopic, 
+      fromBeginning: false 
+    });
+  }
+
+  private async setupConsumer(): Promise<void> {
+    await this.consumer.run({
+      eachMessage: async ({ topic, partition, message }) => {
+        try {
+          const startTime = Date.now();
+          
+          // دیکد کردن پیام Avro
+          const decodedMessage = await this.registry.decode(message.value);
+          const processedData = await this.processTransaction(decodedMessage);
+
+          // تولید پیام پردازش شده
+          await this.produceProcessedMessage(processedData);
+
+          // ثبت متریک‌ها
+          this.metrics.recordTransactionProcessed(
+            'success',
+            Date.now() - startTime
+          );
+
+        } catch (error) {
+          console.error('Error processing transaction:', error);
+          this.metrics.recordTransactionProcessed('error', 0);
+        }
+      },
+    });
+  }
+
+  private async processTransaction(rawTransaction: any): Promise<APZTransaction> {
+    // پردازش تراکنش APZ
+    const processedTx: APZTransaction = {
+      hash: rawTransaction.hash,
+      blockNumber: rawTransaction.blockNumber,
+      blockHash: rawTransaction.blockHash,
+      from: rawTransaction.from,
+      to: rawTransaction.to,
+      value: this.convertHexToWei(rawTransaction.value),
+      gas: BigInt(rawTransaction.gas),
+      gasPrice: BigInt(rawTransaction.gasPrice),
+      input: rawTransaction.input,
+      nonce: rawTransaction.nonce,
+      transactionIndex: rawTransaction.transactionIndex,
+      timestamp: Date.now(),
+      status: 'pending',
+      chainId: this.config.chainId || 'apz-mainnet',
+      
+      // فیلدهای مخصوص APZ Chain
+      apzSpecific: {
+        tokenTransfers: await this.extractTokenTransfers(rawTransaction),
+        contractInteractions: this.parseContractInteractions(rawTransaction),
+        fee: this.calculateTransactionFee(rawTransaction)
+      }
+    };
+
+    // اعتبارسنجی تراکنش
+    this.validateTransaction(processedTx);
+
+    return processedTx;
+  }
+
+  private async extractTokenTransfers(tx: any): Promise<APZTokenTransfer[]> {
+    const transfers: APZTokenTransfer[] = [];
+
+    // پردازش انتقال توکن‌های APZ
+    if (tx.input && tx.input !== '0x') {
+      try {
+        // تشخیص استانداردهای توکن (ERC-20, ERC-721, etc.)
+        const tokenStandard = this.detectTokenStandard(tx.input);
+        
+        if (tokenStandard === 'ERC20') {
+          const transfer = this.parseERC20Transfer(tx);
+          if (transfer) transfers.push(transfer);
+        }
+
+        // اضافه کردن سایر استانداردها
+        if (tokenStandard === 'ERC721') {
+          const transfer = this.parseERC721Transfer(tx);
+          if (transfer) transfers.push(transfer);
+        }
+
+      } catch (error) {
+        console.warn('Failed to extract token transfers:', error);
+      }
+    }
+
+    return transfers;
+  }
+
+  private parseERC20Transfer(tx: any): APZTokenTransfer | null {
+    // پیاده‌سازی پارس کردن تراکنش‌های ERC-20
+    try {
+      // اینجا باید ABI مربوط به توکن‌های APZ پیاده‌سازی شود
+      return {
+        type: 'ERC20',
+        from: tx.from,
+        to: this.decodeAddress(tx.input, 4), // استخراج آدرس مقصد از input
+        value: this.decodeUint256(tx.input, 36), // استخراج مقدار از input
+        tokenAddress: tx.to,
+        transactionHash: tx.hash,
+        logIndex: 0
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private calculateTransactionFee(tx: any): bigint {
+    const gasUsed = BigInt(tx.gasUsed || tx.gas);
+    const gasPrice = BigInt(tx.gasPrice);
+    return gasUsed * gasPrice;
+  }
+
+  private validateTransaction(tx: APZTransaction): void {
+    const errors: string[] = [];
+
+    if (!tx.hash || tx.hash.length !== 66) {
+      errors.push('Invalid transaction hash');
+    }
+
+    if (!tx.from || !this.isValidAddress(tx.from)) {
+      errors.push('Invalid from address');
+    }
+
+    if (tx.to && !this.isValidAddress(tx.to)) {
+      errors.push('Invalid to address');
+    }
+
+    if (errors.length > 0) {
+      throw new Error(`Transaction validation failed: ${errors.join(', ')}`);
+    }
+  }
+
+  private isValidAddress(address: string): boolean {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
+  private convertHexToWei(hexValue: string): bigint {
+    return BigInt(hexValue);
+  }
+
+  private async produceProcessedMessage(processedTx: APZTransaction): Promise<void> {
+    const encodedMessage = await this.registry.encode(processedTx);
+    
+    await this.producer.send({
+      topic: this.config.outputTopic,
+      messages: [
+        {
+          key: processedTx.hash,
+          value: encodedMessage
+        }
+      ]
+    });
+  }
+
+  async shutdown(): Promise<void> {
+    await this.consumer.disconnect();
+    await this.producer.disconnect();
+    console.log('APZ Transaction Processor shutdown complete');
+  }
+}
